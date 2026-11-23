@@ -1,56 +1,14 @@
 """Lectura y análisis descriptivo de precios históricos."""
 
-import csv
 import math
-from datetime import date
 from pathlib import Path
+
+from investment_agent.price_history import load_price_history
 
 
 def load_close_prices(csv_path: str | Path) -> list[float]:
     """Carga precios de cierre diarios y valida fechas y valores."""
-    prices = []
-    previous_date = None
-
-    with Path(csv_path).open(encoding="utf-8-sig", newline="") as csv_file:
-        reader = csv.DictReader(csv_file)
-        required_columns = {"date", "close"}
-        if reader.fieldnames is None or not required_columns.issubset(reader.fieldnames):
-            raise ValueError("El CSV debe incluir las columnas 'date' y 'close'.")
-
-        for row in reader:
-            row_number = reader.line_num
-            try:
-                row_date = date.fromisoformat(row["date"])
-            except (TypeError, ValueError) as error:
-                raise ValueError(
-                    f"Fecha no válida en la fila {row_number}; usa YYYY-MM-DD."
-                ) from error
-
-            if previous_date is not None and row_date <= previous_date:
-                raise ValueError(
-                    f"Las fechas deben estar en orden ascendente y sin duplicados "
-                    f"(fila {row_number})."
-                )
-            previous_date = row_date
-
-            try:
-                close = float(row["close"])
-            except (TypeError, ValueError) as error:
-                raise ValueError(
-                    f"Precio de cierre no válido en la fila {row_number}."
-                ) from error
-
-            if not math.isfinite(close) or close <= 0:
-                raise ValueError(
-                    f"El precio de cierre debe ser un número positivo y finito "
-                    f"(fila {row_number})."
-                )
-            prices.append(close)
-
-    if not prices:
-        raise ValueError("El CSV no contiene observaciones de precios.")
-
-    return prices
+    return [float(bar.close) for bar in load_price_history(csv_path)]
 
 
 def analyze_prices(prices: list[float], window: int = 20) -> dict[str, float | int | str | None]:
